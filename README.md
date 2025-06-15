@@ -1,5 +1,42 @@
 # Final Progect
 
+## Part 1. Building an End‑to‑End Streaming Pipeline
+
+This assignment consists of designing and implementing a Spark Structured Streaming solution that continuously ingests athlete competition results from Kafka, enriches them with static bio‑metric data stored in MySQL, computes sport‑specific feature aggregates, and writes the results to both a downstream Kafka topic and back into MySQL. These aggregated features (mean height, mean weight) along with demographic attributes (sex, country) and the target label (medal presence) will be used to train individual ML models for each sport.
+
+## Task description
+
+1. **Ingest athlete bio‑metrics**  
+   • Use Spark’s JDBC connector to load the table `olympic_dataset.athlete_bio` from MySQL.  
+   • Filter out any records where height or weight is null or not numeric.
+
+2. **Publish event results to Kafka**  
+   • Read the MySQL table `athlete_event_results` (historical competition data).  
+   • Write each row as a compact JSON message into the Kafka topic `athlete_event_results`.
+
+3. **Consume and parse streaming JSON**  
+   • Configure Spark Structured Streaming to consume from the `athlete_event_results` topic.  
+   • Parse each incoming JSON message into a DataFrame with explicit columns for all fields (e.g. `athlete_id`, `sport`, `medal`, `timestamp`, etc.).
+
+4. **Join static and streaming data**  
+   • Perform a broadcast join of the parsed event results stream with the static athlete bio‑metrics DataFrame on `athlete_id`.  
+   • Ensure the join handles late or out‑of‑order events appropriately.
+
+5. **Compute rolling feature aggregates**  
+   • For each micro‑batch, group the joined data by `(sport, medal, sex, country_noc)`.  
+   • Calculate the average height and average weight for each group.  
+   • Append a processing timestamp column (`calculated_at`) indicating when the aggregation occurred.
+
+6. **Write aggregated features to sinks**  
+   • Using `forEachBatch`, write each batch of aggregated results to:  
+     a. A new Kafka topic `athlete_agg_Filonenko` for downstream streaming consumers  
+     b. A MySQL table `athlete_agg_Filonenko` as an append‑only insert
+--
+
+All code should be organized into scripts that can be submitted via `spark-submit`, with configuration and schema definitions separated into dedicated modules. The pipeline must support exactly‑once semantics through the use of Spark checkpoints, idempotent Kafka producers, and transactional or idempotent writes to MySQL.  
+
+---
+
 ## Part 2: Building a Batch Data Lake
 
 This project implements a three-layer batch data lake architecture using Apache Spark and Airflow. The data flows from raw ingestion (Landing) through progressively refined layers (Bronze → Silver → Gold).
